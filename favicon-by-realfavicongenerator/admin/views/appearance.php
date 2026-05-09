@@ -254,7 +254,8 @@
 <?php if ( $new_favicon_params_url ) { ?>
 	var data = {
 		action: '<?php echo esc_html( Favicon_By_RealFaviconGenerator_Common::PLUGIN_PREFIX . '_install_new_favicon' ) ?>',
-		json_result_url: '<?php echo esc_html( $new_favicon_params_url ) ?>'
+		json_result_url: '<?php echo esc_html( $new_favicon_params_url ) ?>',
+		_wpnonce: '<?php echo esc_html( $nonce ) ?>'
 	};
 <?php } ?>
 
@@ -289,7 +290,7 @@
 					if (response.message != null) {
 						msg += ": " + response.message;
 					}
-					jQuery('#install_error_message p').html(msg);
+					jQuery('#install_error_message p').text(msg);
 					jQuery('#install_in_progress_message').fadeOut(function() {
 						jQuery('#install_error_message').fadeIn();
 					});
@@ -297,7 +298,7 @@
 			})
 			.fail(function() {
 				var msg = "<?php esc_html_e( 'An internal error occurred', FBRFG_PLUGIN_SLUG ); ?>";
-				jQuery('#install_error_message p').html(msg);
+				jQuery('#install_error_message p').text(msg);
 				jQuery('#install_in_progress_message').fadeOut(function() {
 					jQuery('#install_error_message').fadeIn();
 				});

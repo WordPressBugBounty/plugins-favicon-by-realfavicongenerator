@@ -169,6 +169,33 @@ class Favicon_By_RealFaviconGenerator_Admin extends Favicon_By_RealFaviconGenera
 		'appearance.php';
 	}
 
+	private function build_json_result_url() {
+		// RFG is configured with path_only=true, so json_result_url is a path
+		// like /files/<hash>/json.json. We accept that, and also tolerate a
+		// full URL provided the host is realfavicongenerator.net. Any other
+		// host (including userinfo tricks like http://@attacker/poc.json,
+		// where realfavicongenerator.net would otherwise become the userinfo)
+		// is rejected.
+		$raw   = esc_url_raw( wp_unslash( $_REQUEST['json_result_url'] ) );
+		$parts = wp_parse_url( $raw );
+		if ( ! is_array( $parts ) ) {
+			throw new InvalidArgumentException( 'Invalid favicon result URL' );
+		}
+		if ( ! empty( $parts['host'] ) &&
+			strtolower( $parts['host'] ) !== 'realfavicongenerator.net' ) {
+			throw new InvalidArgumentException( 'Invalid favicon result URL' );
+		}
+		if ( ! empty( $parts['scheme'] ) &&
+			! in_array( strtolower( $parts['scheme'] ), array( 'http', 'https' ), true ) ) {
+			throw new InvalidArgumentException( 'Invalid favicon result URL' );
+		}
+
+		$path  = isset( $parts['path'] ) ? $parts['path'] : '/';
+		$query = isset( $parts['query'] ) ? '?' . $parts['query'] : '';
+
+		return 'https://realfavicongenerator.net' . $path . $query;
+	}
+
 	private function download_result_json( $url ) {
 		$resp = wp_remote_get( $url );
 		if ( is_wp_error( $resp ) ) {
@@ -186,12 +213,21 @@ class Favicon_By_RealFaviconGenerator_Admin extends Favicon_By_RealFaviconGenera
 	public function install_new_favicon() {
 		header( 'Content-type: application/json' );
 
+		// Verify the nonce BEFORE doing anything that touches the
+		// json_result_url parameter. Otherwise an attacker who tricks
+		// an admin into opening a crafted URL could trigger the SSRF
+		// path and reflect attacker-controlled error messages.
+		$nonce = isset( $_REQUEST['_wpnonce'] ) ? $_REQUEST['_wpnonce'] : '';
+		if ( ! wp_verify_nonce( $nonce, self::NONCE_ACTION_NAME_FAVICON_GENERATION ) ) {
+			echo wp_json_encode( array(
+				'status'  => 'error',
+				'message' => __( 'Nonce check failed', FBRFG_PLUGIN_SLUG ),
+			) );
+			die();
+		}
+
 		try {
-			// URL is explicitely decoded to compensate the extra encoding performed while generating the settings page
-			$url = 'https://realfavicongenerator.net' .
-			  preg_replace( '/^http:\/\//', '', esc_url_raw( $_REQUEST['json_result_url'] ) );
-				// esc_url_raw is used to sanitize the path. This functio adds a 'http://' prefix, which is then removed.
-				// This code cannot be moved to a helper, as phpcs won't detect it and report an issue.
+			$url = $this->build_json_result_url();
 
 			$result = $this->download_result_json( $url );
 
