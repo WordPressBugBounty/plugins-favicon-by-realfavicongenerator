@@ -1,6 +1,10 @@
 <?php
 // Copyright 2014-2016 RealFaviconGenerator
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 define( 'RFG_PACKAGE_URL', 'package_url' );
 define( 'RFG_COMPRESSION', 'compression' );
 define( 'RFG_HTML_CODE', 'html_code' );
@@ -39,7 +43,7 @@ class Favicon_By_RealFaviconGenerator_Api_Response {
 		if ( $status != 'success' ) {
 			$msg = $this->getParam( $result, 'error_message', false );
 			$msg = $msg != null ? $msg : 'An error occured';
-			throw new InvalidArgumentException( $msg );
+			throw new InvalidArgumentException( esc_html( $msg ) );
 		}
 
 		$favicon                         = $this->getParam( $response, 'favicon' );
@@ -134,7 +138,7 @@ class Favicon_By_RealFaviconGenerator_Api_Response {
 		if ( isset( $params[ $paramName ] ) ) {
 			return $params[ $paramName ];
 		} elseif ( $throwIfNotFound ) {
-			throw new InvalidArgumentException( 'Cannot find parameter ' . $paramName );
+			throw new InvalidArgumentException( 'Cannot find parameter ' . esc_html( $paramName ) );
 		}
 	}
 
@@ -155,9 +159,10 @@ class Favicon_By_RealFaviconGenerator_Api_Response {
 		if ( $this->getPackageUrl() != null ) {
 			$extractedPath = $outputDirectory . 'favicon_package';
 			if ( ! file_exists( $extractedPath ) ) {
-				if ( mkdir( $extractedPath, 0755, true ) !== true ) {
+				if ( ! wp_mkdir_p( $extractedPath ) ) {
 					throw new InvalidArgumentException(
-						sprintf( __( 'Cannot create directory %s to store the favicon package content', FBRFG_PLUGIN_SLUG ), $extractedPath )
+						// translators: %s is the path to the directory that could not be created
+						sprintf( esc_html__( 'Cannot create directory %s to store the favicon package content', 'favicon-by-realfavicongenerator' ), esc_html( $extractedPath ) )
 					);
 				}
 			}
@@ -204,20 +209,20 @@ class Favicon_By_RealFaviconGenerator_Api_Response {
 		if ( $result !== true ) {
 			$explanation = ( is_wp_error( $result ) )
 				? $result->get_error_message()
-				: __( 'Unknown reason', Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG );
+				: __( 'Unknown reason', 'favicon-by-realfavicongenerator' );
 			if ( get_class( $wp_filesystem ) != 'WP_Filesystem_Direct' ) {
 				$explanation .= ' ' . __(
-					'Apparently WordPress has no direct access to the file system (it uses another mean such as FTP). ' .
-					'This may be the root cause of this issue.',
-					Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG
+					'Apparently WordPress has no direct access to the file system (it uses another mean such as FTP). This may be the root cause of this issue.',
+					'favicon-by-realfavicongenerator'
 				);
 			}
 			throw new InvalidArgumentException(
 				sprintf(
-					__( 'Error while unziping the favicon package %1$s to directory %2$s', Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG ),
-					$packagePath,
-					$extractedPath
-				) . ': ' . $explanation
+					// translators: %1$s is the path to the favicon package zip file, %2$s is the destination directory
+					esc_html__( 'Error while unziping the favicon package %1$s to directory %2$s', 'favicon-by-realfavicongenerator' ),
+					esc_html( $packagePath ),
+					esc_html( $extractedPath )
+				) . ': ' . esc_html( $explanation )
 			);
 		}
 
@@ -294,11 +299,12 @@ class Favicon_By_RealFaviconGenerator_Api_Response {
 			 ( $resp['response']['code'] == null ) || ( $resp['response']['code'] != 200 ) ) {
 			$explanation = is_wp_error( $resp ) ? ( ': ' . $resp->get_error_message() ) : '';
 			throw new InvalidArgumentException(
-				sprintf( __( 'Cannot download file at %s', Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG ), $url ) . $explanation
+				// translators: %s is the URL of the file that could not be downloaded
+				sprintf( esc_html__( 'Cannot download file at %s', 'favicon-by-realfavicongenerator' ), esc_html( $url ) ) . esc_html( $explanation )
 			);
 		}
 		if ( ( ! file_exists( $localPath ) ) || ( filesize( $localPath ) <= 0 ) ) {
-			throw new InvalidArgumentException( __( 'Cannot store downloaded file locally', Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG ) );
+			throw new InvalidArgumentException( esc_html__( 'Cannot store downloaded file locally', 'favicon-by-realfavicongenerator' ) );
 		}
 	}
 

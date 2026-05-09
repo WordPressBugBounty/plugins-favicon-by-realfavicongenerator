@@ -1,6 +1,10 @@
 <?php
 // Copyright 2014-2016 RealFaviconGenerator
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 require_once plugin_dir_path( __FILE__ ) . '..' . DIRECTORY_SEPARATOR .
 	'public' . DIRECTORY_SEPARATOR . 'class-favicon-by-realfavicongenerator-common.php';
 

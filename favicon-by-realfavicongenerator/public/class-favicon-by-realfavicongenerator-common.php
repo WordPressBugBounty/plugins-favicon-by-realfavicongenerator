@@ -49,6 +49,7 @@ class Favicon_By_RealFaviconGenerator_Common {
 		if ( ( ( constant( 'WP_DEBUG' ) == 'true' ) || ( constant( 'WP_DEBUG' ) == 1 ) ) &&
 			( ( constant( 'Favicon_By_RealFaviconGenerator_Common::RFG_DEBUG' ) == 'true' ) ||
 				( constant( 'Favicon_By_RealFaviconGenerator_Common::RFG_DEBUG' ) == 1 ) ) ) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Gated by WP_DEBUG and plugin-specific RFG_DEBUG flag.
 			error_log( 'RealFaviconGenerator - ' . $message );
 		}
 	}
@@ -189,7 +190,8 @@ class Favicon_By_RealFaviconGenerator_Common {
 		if ( $versions == null ) {
 			$this->log_info( 'No versions, return a link to the change log description' );
 			return sprintf(
-				__( "Visit the <a href=\"%s\">RFG's change log</a> to view the content of the update" ),
+				// translators: %s is the URL to the RealFaviconGenerator change log
+				__( "Visit the <a href=\"%s\">RFG's change log</a> to view the content of the update", 'favicon-by-realfavicongenerator' ),
 				'https://realfavicongenerator.net/change_log?since=' . $from
 			);
 		}
@@ -323,18 +325,12 @@ class Favicon_By_RealFaviconGenerator_Common {
 	}
 
 	public static function remove_directory( $directory ) {
-		foreach ( scandir( $directory ) as $v ) {
-			if ( is_dir( $directory . DIRECTORY_SEPARATOR . $v ) ) {
-				if ( $v != '.' && $v != '..' ) {
-					self::remove_directory(
-						$directory . DIRECTORY_SEPARATOR . $v
-					);
-				}
-			} else {
-				unlink( $directory . DIRECTORY_SEPARATOR . $v );
-			}
+		global $wp_filesystem;
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
 		}
-		rmdir( $directory );
+		WP_Filesystem();
+		$wp_filesystem->delete( $directory, true );
 	}
 
 
@@ -344,6 +340,7 @@ class Favicon_By_RealFaviconGenerator_Common {
 	public function load_plugin_textdomain() {
 
 		$domain = self::PLUGIN_SLUG;
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WordPress core filter.
 		$locale = apply_filters( 'plugin_locale', get_locale(), $domain );
 
 		load_textdomain( $domain, trailingslashit( WP_LANG_DIR ) . $domain . DIRECTORY_SEPARATOR . $domain . '-' . $locale . '.mo' );
@@ -357,8 +354,10 @@ class Favicon_By_RealFaviconGenerator_Common {
 
 	// See https://wordpress.stackexchange.com/questions/406097/why-is-wp-request-empty-in-wordpress-6-0#answer-406101
 	public function current_page_url() {
-		$url =  "//{$_SERVER['HTTP_HOST']}{$_SERVER['REQUEST_URI']}";
-		$path = parse_url( $url, PHP_URL_PATH );
+		$host        = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+		$request_uri = isset( $_SERVER['REQUEST_URI'] ) ? esc_url_raw( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '';
+		$url         = "//{$host}{$request_uri}";
+		$path        = parse_url( $url, PHP_URL_PATH );
 		return add_query_arg( $wp->query_vars, $path );
 	}
 
@@ -454,8 +453,9 @@ class Favicon_By_RealFaviconGenerator_Common {
 
 				$zip_path = self::get_tmp_dir();
 				if ( ! file_exists( $zip_path ) ) {
-					if ( mkdir( $zip_path, 0755, true ) !== true ) {
-						throw new InvalidArgumentException( sprintf( __( 'Cannot create directory %s to store the favicon package', FBRFG_PLUGIN_SLUG ), $zip_path ) );
+					if ( ! wp_mkdir_p( $zip_path ) ) {
+						// translators: %s is the path to the directory that could not be created
+						throw new InvalidArgumentException( sprintf( esc_html__( 'Cannot create directory %s to store the favicon package', 'favicon-by-realfavicongenerator' ), esc_html( $zip_path ) ) );
 					}
 				}
 				$response->downloadAndUnpack( $zip_path );
@@ -490,7 +490,7 @@ class Favicon_By_RealFaviconGenerator_Common {
 			)
 		);
 		if ( is_wp_error( $resp ) ) {
-			throw new InvalidArgumentException( 'Cannot run the non-interactive API request for update: ' . $resp->get_error_message() );
+			throw new InvalidArgumentException( 'Cannot run the non-interactive API request for update: ' . esc_html( $resp->get_error_message() ) );
 		}
 
 		$json = wp_remote_retrieve_body( $resp );
@@ -506,12 +506,14 @@ class Favicon_By_RealFaviconGenerator_Common {
 	}
 
 	public function portable_rename( $from, $to ) {
+		global $wp_filesystem;
+		if ( ! function_exists( 'WP_Filesystem' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+		}
+		WP_Filesystem();
 		$from = $this->portable_filename( $from );
 		$to   = $this->portable_filename( $to );
-		rename( $from, $to );
+		$wp_filesystem->move( $from, $to );
 	}
 
 }
-
-// Shortcut
-define( 'FBRFG_PLUGIN_SLUG', Favicon_By_RealFaviconGenerator_Common::PLUGIN_SLUG );

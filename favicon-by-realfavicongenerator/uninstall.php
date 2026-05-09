@@ -24,12 +24,13 @@ function fbrfg_clean_site_instance() {
 
 if ( is_multisite() ) {
 	global $wpdb;
-	$blogs = $wpdb->get_results( "SELECT blog_id FROM {$wpdb->blogs}", ARRAY_A );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Uninstall routine; caching is irrelevant and no helper exists.
+	$fbrfg_blogs = $wpdb->get_results( "SELECT blog_id FROM {$wpdb->blogs}", ARRAY_A );
 	fbrfg_clean_site_instance();
 
-	if ( $blogs ) {
-		foreach ( $blogs as $blog ) {
-			switch_to_blog( $blog['blog_id'] );
+	if ( $fbrfg_blogs ) {
+		foreach ( $fbrfg_blogs as $fbrfg_blog ) {
+			switch_to_blog( $fbrfg_blog['blog_id'] );
 			fbrfg_clean_site_instance();
 			restore_current_blog();
 		}
